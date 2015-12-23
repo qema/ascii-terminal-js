@@ -132,4 +132,12 @@ function Terminal(options) {
       }
     }
   }
+
+  this.clear = function(bg) {
+    for (var x = 0; x < this.width; x++) {
+      for (var y = 0; y < this.height; y++) {
+	terminal.putChar(x, y, 0, null, bg);
+      }
+    }
+  }
 }
