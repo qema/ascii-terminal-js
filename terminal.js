@@ -189,6 +189,25 @@ function Terminal(options) {
     }
   }
 
+  this.drawRect = function(x0, y0, x1, y1, col) {
+    for (var x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
+      this.drawPixel(x, y0, col);
+      this.drawPixel(x, y1, col);
+    }
+    for (var y = Math.min(y0, y1) + 1; y < Math.max(y0, y1); y++) {
+      this.drawPixel(x0, y, col);
+      this.drawPixel(x1, y, col);
+    }
+  }
+
+  this.fillRect = function(x0, y0, x1, y1, col) {
+    for (var x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
+      for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
+	this.drawPixel(x, y, col);
+      }
+    }
+  }
+
   // algorithm: https://web.archive.org/web/20120225095359/ ...
   // http://homepage.smc.edu/kennedy_john/belipse.pdf
   this._plot4 = function (cx, cy, x, y, col) {
