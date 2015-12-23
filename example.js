@@ -10,6 +10,21 @@ function startREPL() {
   var frames = 0;
   var started = false;
 
+  function scroll() {
+    curY--;
+    for (var y = 1; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+	var c = terminal.getChar(x, y);
+	var fg = terminal.getCharFG(x, y);
+	var bg = terminal.getCharBG(x, y);
+	terminal.putChar(x, y - 1, c, fg, bg);
+      }
+    }
+    for (var x = 0; x < width; x++) {
+      terminal.putChar(x, height - 1, 0);
+    }
+  }
+
   document.addEventListener("keypress", function(event) {
     if (started) {
       var c = event.charCode;
@@ -18,18 +33,7 @@ function startREPL() {
 	curX = 0;
 	curY++;
 	if (curY == height) { // reached end, so scroll
-	  curY--;
-	  for (var y = 1; y < height; y++) {
-	    for (var x = 0; x < width; x++) {
-	      var c = terminal.getChar(x, y);
-	      var fg = terminal.getCharFG(x, y);
-	      var bg = terminal.getCharBG(x, y);
-	      terminal.putChar(x, y - 1, c, fg, bg);
-	    }
-	  }
-	  for (var x = 0; x < width; x++) {
-	    terminal.putChar(x, height - 1, 0);
-	  }
+	  scroll();
 	}
 	charCount++;
       } else if (c == 8) {  // backspace
@@ -53,6 +57,9 @@ function startREPL() {
 	if (curX == width) {
 	  curX = 0;
 	  curY++;
+	  if (curY == height) {
+	    scroll();
+	  }
 	}
 	charCount++;
       }
