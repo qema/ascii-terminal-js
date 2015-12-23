@@ -51,11 +51,13 @@ function Terminal(options) {
   this.stage = new PIXI.Container();
 
   var setup = function () {
+    // background layer (for text background colors)
     this.background = new PIXI.Graphics();
     this.background.beginFill(BG_COLOR_DEFAULT);
     this.background.drawRect(0, 0, this.scrWidth, this.scrHeight);
     this.stage.addChild(this.background);
-    
+
+    // text layer
     this.sprites = [];
     this.chars = [];
     this.spriteWidth = this.scrWidth / this.width;
@@ -77,6 +79,10 @@ function Terminal(options) {
       this.chars.push(charCol);
     }
 
+    // foreground graphics layer
+    this.foreground = new PIXI.Graphics();
+    this.stage.addChild(this.foreground);
+
     this.animate();
     
     if (typeof this.ready === "function") {
@@ -94,7 +100,10 @@ function Terminal(options) {
     
     this.renderer.render(this.stage);
   }
-
+  
+  //
+  // --- text methods ----
+  //
   this.putChar = function(x, y, c, fg, bg) {
     fg = fg || FG_COLOR_DEFAULT;
     bg = bg || BG_COLOR_DEFAULT;
@@ -104,10 +113,10 @@ function Terminal(options) {
     this.sprites[x][y].tint = fg;
     // bg
     this.background.beginFill(bg);
-    this.background.lineStyle(0);
     this.background.drawRect(this.sprites[x][y].position.x,
 			     this.sprites[x][y].position.y,
 			     this.spriteWidth, this.spriteHeight);
+    this.background.endFill();
   }
 
   this.getChar = function(x, y) {
@@ -137,6 +146,100 @@ function Terminal(options) {
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
 	terminal.putChar(x, y, 0, null, bg);
+      }
+    }
+    this.foreground.clear();
+  }
+
+  //
+  // --- drawing methods ----
+  //
+  this.drawPixel = function(x, y, col) {
+    col = col || FG_COLOR_DEFAULT;
+    this.foreground.beginFill(col);
+    this.foreground.drawRect(x, y, 1, 1);
+    this.foreground.endFill();
+  }
+
+  // Bresenham's algorithm
+  this.drawLine = function(x0, y0, x1, y1, col) {
+    if (x0 > x1) {
+      var tmp = x1; x1 = x0; x0 = tmp;
+      tmp = y1; y1 = y0; y0 = tmp;
+    }
+    if (Math.abs(x0 - x1) < 1) {  // vertical line
+      for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
+	this.drawPixel(x0, y, col);
+      }
+    } else {
+      var deltax = x1 - x0;
+      var deltay = y1 - y0;
+      var error = 0;
+      var deltaerr = Math.abs(deltay / deltax);
+      var y = y0;
+      for (var x = x0; x <= x1; x++) {
+	this.drawPixel(x, y, col);
+	error += deltaerr;
+	while (error >= 0.5) {
+	  this.drawPixel(x, y);
+	  y += Math.sign(y1 - y0, col);
+	  error -= 1.0;
+	}
+      }
+    }
+  }
+
+  // algorithm: https://web.archive.org/web/20120225095359/ ...
+  // http://homepage.smc.edu/kennedy_john/belipse.pdf
+  this._plot4 = function (cx, cy, x, y, col) {
+    this.drawPixel(cx + x, cy + y, col);
+    this.drawPixel(cx - x, cy + y, col);
+    this.drawPixel(cx - x, cy - y, col);
+    this.drawPixel(cx + x, cy - y, col);
+  }
+
+  this.drawEllipse = function(cx, cy, xradius, yradius, col) {
+    var twoASquare = 2 * xradius * xradius;
+    var twoBSquare = 2 * yradius * yradius;
+    // 1st set
+    var x = xradius, y = 0;
+    var xchange = yradius * yradius * (1 - 2 * xradius);
+    var ychange = xradius * xradius;
+    var ellipseError = 0;
+    var stoppingX = twoBSquare * xradius;
+    var stoppingY = 0;
+    while (stoppingX >= stoppingY) {
+      this._plot4(cx, cy, x, y, col);
+      y++;
+      stoppingY += twoASquare;
+      ellipseError += ychange;
+      ychange += twoASquare;
+      if ((2 * ellipseError + xchange) > 0) {
+	x--;
+	stoppingX -= twoBSquare;
+	ellipseError += xchange;
+	xchange += twoBSquare;
+      }
+    }
+    // 2nd set
+    x = 0;
+    y = yradius;
+    xchange = yradius * yradius;
+    ychange = xradius * xradius * (1 - 2 * yradius);
+    ellipseError = 0;
+    stoppingX = 0;
+    stoppingY = twoASquare * yradius;
+    while (stoppingX <= stoppingY) {
+      this._plot4(cx, cy, x, y, col);
+      x++;
+      stoppingX += twoBSquare;
+      ellipseError += xchange;
+      xchange += twoBSquare;
+      if ((2 * ellipseError + ychange) > 0) {
+	y--;
+	stoppingY -= twoASquare;
+	ellipseError += ychange;
+	ychange += twoASquare;
       }
     }
   }
