@@ -42,7 +42,7 @@ function startREPL() {
 	    while (terminal.getChar(curX, curY) == 0 && curX > 0) {
 	      curX--;
 	    }
-	    if (curX > 0 && curX < width - 1) curX++;
+	    if (terminal.getChar(curX, curY) > 0 && curX < width - 1) curX++;
 	  }
 	  terminal.putChar(curX, curY, 0);
 	  charCount--;
