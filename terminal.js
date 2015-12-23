@@ -105,8 +105,8 @@ function Terminal(options) {
   // --- text methods ----
   //
   this.putChar = function(x, y, c, fg, bg) {
-    fg = fg || FG_COLOR_DEFAULT;
-    bg = bg || BG_COLOR_DEFAULT;
+    if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
+    if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
     var value = (typeof c == "string") ? c.charCodeAt(0) : c;
     this.chars[x][y] = {value: value, fg: fg, bg: bg};
     this.sprites[x][y].texture = this.tileset.tiles[value];
@@ -142,23 +142,43 @@ function Terminal(options) {
     }
   }
 
-  this.clear = function(bg) {
+  this.clearText = function(bg) {
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
 	terminal.putChar(x, y, 0, null, bg);
       }
     }
+  }
+  
+  this.clearDraw = function() {
     this.foreground.clear();
   }
 
+  this.clear = function(bg) {
+    this.clearText(bg);
+    this.clearDraw();
+  }
+  
   //
   // --- drawing methods ----
   //
   this.drawPixel = function(x, y, col) {
-    col = col || FG_COLOR_DEFAULT;
+    if (typeof col === "undefined") { col = FG_COLOR_DEFAULT };
     this.foreground.beginFill(col);
     this.foreground.drawRect(x, y, 1, 1);
     this.foreground.endFill();
+  }
+
+  this.drawHorizLine = function(x0, x1, y, col) {
+    for (var x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
+      this.drawPixel(x, y, col);
+    }
+  }
+
+  this.drawVertLine = function(x, y0, y1, col) {
+    for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
+      this.drawPixel(x, y, col);
+    }
   }
 
   // Bresenham's algorithm
@@ -168,9 +188,7 @@ function Terminal(options) {
       tmp = y1; y1 = y0; y0 = tmp;
     }
     if (Math.abs(x0 - x1) < 1) {  // vertical line
-      for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
-	this.drawPixel(x0, y, col);
-      }
+      this.drawVertLine(x0, y0, y1, col);
     } else {
       var deltax = x1 - x0;
       var deltay = y1 - y0;
@@ -190,21 +208,15 @@ function Terminal(options) {
   }
 
   this.drawRect = function(x0, y0, x1, y1, col) {
-    for (var x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
-      this.drawPixel(x, y0, col);
-      this.drawPixel(x, y1, col);
-    }
-    for (var y = Math.min(y0, y1) + 1; y < Math.max(y0, y1); y++) {
-      this.drawPixel(x0, y, col);
-      this.drawPixel(x1, y, col);
-    }
+    this.drawHorizLine(x0, x1, y0, col);
+    this.drawHorizLine(x0, x1, y1, col);
+    this.drawVertLine(x0, Math.min(y0, y1) + 1, Math.max(y0, y1) - 1, col);
+    this.drawVertLine(x1, Math.min(y0, y1) + 1, Math.max(y0, y1) - 1, col);
   }
 
   this.fillRect = function(x0, y0, x1, y1, col) {
-    for (var x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
-      for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
-	this.drawPixel(x, y, col);
-      }
+    for (var y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
+      this.drawHorizLine(x0, x1, y, col);
     }
   }
 
@@ -261,5 +273,9 @@ function Terminal(options) {
 	ychange += twoASquare;
       }
     }
+  }
+
+  this.fillEllipse = function(cx, cy, xradius, yradius, col) {
+    
   }
 }
