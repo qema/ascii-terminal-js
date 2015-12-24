@@ -106,19 +106,18 @@ function Terminal(options) {
   // --- text methods ----
   //
   this.putChar = function(x, y, c, fg, bg) {
-    if (typeof fg === "undefined") { fg = this.getCharFG(x, y) };
+    if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
+    if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
     var value = (typeof c == "string") ? c.charCodeAt(0) : c;
     this.chars[x][y] = {value: value, fg: fg, bg: bg};
     this.sprites[x][y].texture = this.tileset.tiles[value];
     this.sprites[x][y].tint = fg;
-    if (typeof bg !== "undefined") {
-      // bg
-      this.background.beginFill(bg);
-      this.background.drawRect(this.sprites[x][y].position.x,
-			       this.sprites[x][y].position.y,
-			       this.spriteWidth, this.spriteHeight);
-      this.background.endFill();
-    }
+    // bg
+    this.background.beginFill(bg);
+    this.background.drawRect(this.sprites[x][y].position.x,
+			     this.sprites[x][y].position.y,
+			     this.spriteWidth, this.spriteHeight);
+    this.background.endFill();
   }
 
   this.getChar = function(x, y) {
@@ -131,7 +130,7 @@ function Terminal(options) {
     return this.chars[x][y].bg;
   }
   this.getCharAttribs = function(x, y) {
-    return this.chars[x][y];
+    return this.chars[x][y]
   }
 
   this.putString = function(x, y, str, fg, bg) {
