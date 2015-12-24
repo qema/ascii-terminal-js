@@ -106,18 +106,20 @@ function Terminal(options) {
   // --- text methods ----
   //
   this.putChar = function(x, y, c, fg, bg) {
-    if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
-    if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
-    var value = (typeof c == "string") ? c.charCodeAt(0) : c;
-    this.chars[x][y] = {value: value, fg: fg, bg: bg};
-    this.sprites[x][y].texture = this.tileset.tiles[value];
-    this.sprites[x][y].tint = fg;
-    // bg
-    this.background.beginFill(bg);
-    this.background.drawRect(this.sprites[x][y].position.x,
-			     this.sprites[x][y].position.y,
-			     this.spriteWidth, this.spriteHeight);
-    this.background.endFill();
+    if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
+      if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
+      if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
+      var value = (typeof c == "string") ? c.charCodeAt(0) : c;
+      this.chars[x][y] = {value: value, fg: fg, bg: bg};
+      this.sprites[x][y].texture = this.tileset.tiles[value];
+      this.sprites[x][y].tint = fg;
+      // bg
+      this.background.beginFill(bg);
+      this.background.drawRect(this.sprites[x][y].position.x,
+			       this.sprites[x][y].position.y,
+			       this.spriteWidth, this.spriteHeight);
+      this.background.endFill();
+    }
   }
 
   this.getChar = function(x, y) {
