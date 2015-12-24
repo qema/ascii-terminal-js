@@ -76,6 +76,8 @@ function startREPL() {
     terminal.drawRect(20, 20, 200, 100, 0x0000ff);
     terminal.fillRect(21, 21, 199, 99, 0x00ff00);
     terminal.drawPixel(50, 50, 0x000000);
+
+    terminal.fillEllipse(100, 100, 50, 100);
   }
   
   var lastX = 0, lastY = 0;

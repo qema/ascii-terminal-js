@@ -47,6 +47,7 @@ function Terminal(options) {
 				{antialiasing: false,
 				 resolution: window.devicePixelRatio});
   this.view = this.renderer.view;
+  this.view.className = "terminal";
 
   this.stage = new PIXI.Container();
 
@@ -276,6 +277,13 @@ function Terminal(options) {
   }
 
   this.fillEllipse = function(cx, cy, xradius, yradius, col) {
-    
+    for (var x = cx - xradius; x <= cx + xradius; x++) {
+      for (var y = cy - yradius; y <= cy + yradius; y++) {
+	if ((x-cx)*(x-cx)/(xradius*xradius)+
+	    (y-cy)*(y-cy)/(yradius*yradius) <= 1) {
+    	  this.drawPixel(x, y);
+	}
+      }
+    }
   }
 }
