@@ -151,7 +151,7 @@ function Terminal(options) {
   this.clearText = function(bg) {
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
-	this.putChar(x, y, 0, null, bg);
+	this.putChar(x, y, 0, FG_COLOR_DEFAULT, bg);
       }
     }
   }
