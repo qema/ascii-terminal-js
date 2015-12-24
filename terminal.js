@@ -148,10 +148,10 @@ function Terminal(options) {
     }
   }
 
-  this.clearText = function(bg) {
+  this.clearText = function(fg, bg) {
     for (var x = 0; x < this.width; x++) {
       for (var y = 0; y < this.height; y++) {
-	this.putChar(x, y, 0, FG_COLOR_DEFAULT, bg);
+	this.putChar(x, y, 0, fg, bg);
       }
     }
   }
@@ -160,8 +160,8 @@ function Terminal(options) {
     this.foreground.clear();
   }
 
-  this.clear = function(bg) {
-    this.clearText(bg);
+  this.clear = function(fg, bg) {
+    this.clearText(fg, bg);
     this.clearDraw();
   }
   
