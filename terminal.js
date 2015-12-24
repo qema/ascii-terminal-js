@@ -129,6 +129,9 @@ function Terminal(options) {
   this.getCharBG = function(x, y) {
     return this.chars[x][y].bg;
   }
+  this.getCharAttribs = function(x, y) {
+    return this.chars[x][y];
+  }
 
   this.putString = function(x, y, str, fg, bg) {
     var curX = x, curY = y;
