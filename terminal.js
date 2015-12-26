@@ -41,9 +41,12 @@ function Tileset(options) {
 
       bx.drawImage(this.img, rect.x, rect.y, rect.width, rect.height,
 		   0, 0, w, h);
-      img = new Image();
-      img.src = buffer.toDataURL("image/png");
-      cache[[id, col]] = img;
+      var cached = new Image();
+      cached.onload = function() {
+        cache[[id, col]] = cached;
+      }
+      cached.src = buffer.toDataURL("image/png");
+      img = buffer;
     }
     ctx.drawImage(img, 0, 0, this.tileWidth, this.tileHeight, x, y, w, h);
   }
