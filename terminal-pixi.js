@@ -1,7 +1,3 @@
-function cssColor(c) {
-  return "#" + ("000000" + c.toString(16)).substr(-6)
-}
-
 function Tileset(options) {
   options = options || {}
   this.width = options.width || 128;
@@ -9,52 +5,30 @@ function Tileset(options) {
   this.tileWidth = options.tileWidth || 8;
   this.tileHeight = options.tileHeight || 16;
   this.name = options.name || "tileset.png";
-  
-  this.getTileRect = function(i) {
-    return { x: (i % (this.width / this.tileWidth)) * this.tileWidth,
-	     y: Math.floor(i / (this.width / this.tileWidth)) *
-	        this.tileHeight,
-	     width: this.tileWidth,
-	     height: this.tileHeight}
-  }
 
-  var cache = {};
-  var buffer = document.createElement("canvas");
-  buffer.width = this.tileWidth;
-  buffer.height = this.tileHeight;
-  this.drawTile = function(ctx, id, col, x, y, w, h) {
-    if (typeof col === "undefined") { col = 0xffffff; }
-
-    var rect = this.getTileRect(id);
-    ctx.drawImage(this.img, rect.x, rect.y, rect.width, rect.height,
-		  x, y, w, h);
-    
-    var img;
-    if ([id, col] in cache) {
-      img = cache[[id, col]];
-    } else {
-      var bx = buffer.getContext("2d");
-
-      bx.fillStyle = cssColor(col);
-      bx.fillRect(0, 0, buffer.width, buffer.height);
-      bx.globalCompositeOperation = "destination-atop";
-
-      bx.drawImage(this.img, rect.x, rect.y, rect.width, rect.height,
-		   0, 0, w, h);
-      img = new Image();
-      img.src = buffer.toDataURL("image/png");
-      cache[[id, col]] = img;
+  this.setup = function (loader, resources) {
+    var baseTexture = resources[this.name].texture.baseTexture;
+    baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+    this.tiles = {}
+    var x = 0, y = 0;
+    var numTiles =
+	(this.width / this.tileWidth) *	(this.height / this.tileHeight);
+    for (var i = 0; i < numTiles; i++) {
+      var frame = new PIXI.Rectangle(x, y, this.tileWidth, this.tileHeight);
+      this.tiles[i] = new PIXI.Texture(baseTexture, frame);
+      x += this.tileWidth;
+      if (x >= this.width) {
+	x = 0;
+	y += this.tileHeight;
+      }
     }
-    ctx.drawImage(img, 0, 0, this.tileWidth, this.tileHeight, x, y, w, h);
-  }
-  
-  this.img = new Image();
-  this.img.onload = function() {
+
     if (typeof this.loaded === "function") {
       this.loaded();
     }
-  }.bind(this);
-  this.img.src = this.name;
+  }
+  
+  PIXI.loader.add(this.name, this.name).load(this.setup.bind(this));
 }
 
 function Terminal(options) {
@@ -68,54 +42,65 @@ function Terminal(options) {
   this.height = options.height || 30;
   this.tileset = options.tileset || new Tileset();
 
-  var spriteWidth = this.scrWidth / this.width;
-  var spriteHeight = this.scrHeight / this.height;
+  this.renderer =
+    new PIXI.autoDetectRenderer(this.scrWidth, this.scrHeight,
+				{antialiasing: false,
+				 resolution: window.devicePixelRatio});
+  this.view = this.renderer.view;
+  this.view.className = "terminal";
 
-  var canvas = document.createElement("canvas");
-  this.resolution = window.devicePixelRatio;
-  canvas.className = "terminal";
-  canvas.width = this.scrWidth * this.resolution;
-  canvas.height = this.scrHeight * this.resolution;
-  canvas.style.width = this.scrWidth.toString() + "px";
-  canvas.style.height = this.scrHeight.toString() + "px";
-  canvas.style.border = "1px solid";
-  this.ctx = canvas.getContext("2d");
-  this.ctx.mozImageSmoothingEnabled = false;
-  this.ctx.webkitImageSmoothingEnabled = false;
-  this.ctx.imageSmoothingEnabled = false;
-  this.ctx.scale(this.resolution, this.resolution);
-  this.view = canvas;
+  this.stage = new PIXI.Container();
 
-  // setup
-  this.tileset.loaded = function() {
-    // char memory
+  var setup = function () {
+    // background layer (for text background colors)
+    this.background = new PIXI.Graphics();
+    this.background.beginFill(BG_COLOR_DEFAULT);
+    this.background.drawRect(0, 0, this.scrWidth, this.scrHeight);
+    this.stage.addChild(this.background);
+
+    // text layer
+    this.sprites = [];
     this.chars = [];
+    this.spriteWidth = this.scrWidth / this.width;
+    this.spriteHeight = this.scrHeight / this.height;
     for (var x = 0; x < this.width; x++) {
-      var col = [];
+      var spriteCol = [];
+      var charCol = [];
       for (var y = 0; y < this.height; y++) {
-	col.push({value: 0, fg: FG_COLOR_DEFAULT, bg: BG_COLOR_DEFAULT});
+	var sprite = new PIXI.Sprite(this.tileset.tiles[0]);
+	sprite.position.x = x * this.spriteWidth;
+	sprite.position.y = y * this.spriteHeight;
+	sprite.width = this.spriteWidth;
+	sprite.height = this.spriteHeight;
+	spriteCol.push(sprite);
+	charCol.push({value: 0, fg: FG_COLOR_DEFAULT, bg: BG_COLOR_DEFAULT});
+	this.stage.addChild(sprite);
       }
-      this.chars.push(col);
+      this.sprites.push(spriteCol);
+      this.chars.push(charCol);
     }
-    // background
-    this.ctx.fillStyle = cssColor(BG_COLOR_DEFAULT);
-    this.ctx.fillRect(0, 0, this.scrWidth, this.scrHeight);
 
-    // animate loop
-    this.animate = function () {
-      requestAnimationFrame(this.animate.bind(this));
+    // foreground graphics layer
+    this.foreground = new PIXI.Graphics();
+    this.stage.addChild(this.foreground);
 
-      if (typeof this.update === "function") {
-	this.update();
-      }
-    }
     this.animate();
-
-    // callback
+    
     if (typeof this.ready === "function") {
       this.ready();
     }
-  }.bind(this);
+  }
+  this.tileset.loaded = setup.bind(this);
+
+  this.animate = function () {
+    requestAnimationFrame(this.animate.bind(this));
+    
+    if (typeof this.update === "function") {
+      this.update();
+    }
+    
+    this.renderer.render(this.stage);
+  }
   
   //
   // --- text methods ----
@@ -124,31 +109,30 @@ function Terminal(options) {
     if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
       if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
       if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
-      var value = (typeof c === "string") ? c.charCodeAt(0) : c;
-      var src = this.tileset.getTileRect(value);
-      this.chars[x][y].value = value;
-      this.chars[x][y].fg = fg;
-      this.chars[x][y].bg = bg;
-      this.ctx.fillStyle = cssColor(bg);
-      this.ctx.fillRect(x * spriteWidth, y * spriteHeight,
-			spriteWidth, spriteHeight);
-      this.tileset.drawTile(this.ctx, value, fg,
-			    x * spriteWidth, y * spriteHeight,
-			    spriteWidth, spriteHeight);
+      var value = (typeof c == "string") ? c.charCodeAt(0) : c;
+      this.chars[x][y] = {value: value, fg: fg, bg: bg};
+      this.sprites[x][y].texture = this.tileset.tiles[value];
+      this.sprites[x][y].tint = fg;
+      // bg
+      this.background.beginFill(bg);
+      this.background.drawRect(this.sprites[x][y].position.x,
+			       this.sprites[x][y].position.y,
+			       this.spriteWidth, this.spriteHeight);
+      this.background.endFill();
     }
   }
 
-  this.getCharAttribs = function(x, y) {
-    return this.chars[x][y];
-  }
   this.getChar = function(x, y) {
-    return this.getCharAttribs(x, y).value;
+    return this.chars[x][y].value;
   }
   this.getCharFG = function(x, y) {
-    return this.getCharAttribs(x, y).fg;
+    return this.chars[x][y].fg;
   }
   this.getCharBG = function(x, y) {
-    return this.getCharAttribs(x, y).bg;
+    return this.chars[x][y].bg;
+  }
+  this.getCharAttribs = function(x, y) {
+    return this.chars[x][y]
   }
 
   this.putString = function(x, y, str, fg, bg) {
@@ -173,6 +157,7 @@ function Terminal(options) {
   }
   
   this.clearDraw = function() {
+    this.foreground.clear();
   }
 
   this.clear = function(fg, bg) {
@@ -185,8 +170,9 @@ function Terminal(options) {
   //
   this.drawPixel = function(x, y, col) {
     if (typeof col === "undefined") { col = FG_COLOR_DEFAULT };
-    this.ctx.fillStyle = cssColor(col);
-    this.ctx.fillRect(x, y, 1, 1);
+    this.foreground.beginFill(col);
+    this.foreground.drawRect(x, y, 1, 1);
+    this.foreground.endFill();
   }
 
   this.drawHorizLine = function(x0, x1, y, col) {

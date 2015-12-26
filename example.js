@@ -2,7 +2,6 @@ function startREPL() {
   var width = 80, height = 30;
   
   var terminal = new Terminal({width: width, height: height});
-  terminal.view.id = "terminal";
   document.body.appendChild(terminal.view);
 
   var charCount = 0;
@@ -68,7 +67,7 @@ function startREPL() {
   });
 
   terminal.ready = function() {
-    terminal.putString(0, 0, "Type anything.");
+    terminal.putString(0, 0, "Type anything.", 0xff0000, 0x0000ff);
     terminal.putString(0, 1, "--------------");
     curY = 2;
     started = true;
@@ -78,17 +77,17 @@ function startREPL() {
     terminal.drawPixel(50, 50, 0x000000);
 
     terminal.fillEllipse(100, 100, 50, 100);
-  }
-  
-  var lastX = 0, lastY = 0;
-  terminal.update = function() {
-    if (started) {
-      if (frames % 60 == 0) {
-	terminal.putChar(curX, curY, "_"); lastX = curX; lastY = curY;
-      } else if (frames % 60 == 30) {
-	terminal.putChar(lastX, lastY, " ");
+
+    var lastX = 0, lastY = 0;
+    terminal.update = function() {
+      if (started) {
+	if (frames % 60 == 0) {
+	  terminal.putChar(curX, curY, "_"); lastX = curX; lastY = curY;
+	} else if (frames % 60 == 30) {
+	  terminal.putChar(lastX, lastY, " ");
+	}
+	frames++;
       }
-      frames++;
     }
   }
 }
