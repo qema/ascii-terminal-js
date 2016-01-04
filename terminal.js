@@ -15,9 +15,10 @@ function Tileset(options) {
 	     y: Math.floor(i / (this.width / this.tileWidth)) *
 	        this.tileHeight,
 	     width: this.tileWidth,
-	     height: this.tileHeight}
+	     height: this.tileHeight }
   }
 
+  const CachePlaceholder = "*loading*"
   var cache = {};
   var buffer = document.createElement("canvas");
   buffer.width = this.tileWidth;
@@ -26,11 +27,12 @@ function Tileset(options) {
     if (typeof col === "undefined") { col = 0xffffff; }
 
     var rect = this.getTileRect(id);
+    // draw tile
     ctx.drawImage(this.img, rect.x, rect.y, rect.width, rect.height,
 		  x, y, w, h);
     
     var img;
-    if ([id, col] in cache) {
+    if ([id, col] in cache && cache[[id, col]] != CachePlaceholder) {
       img = cache[[id, col]];
     } else {
       var bx = buffer.getContext("2d");
@@ -40,14 +42,18 @@ function Tileset(options) {
       bx.globalCompositeOperation = "destination-atop";
 
       bx.drawImage(this.img, rect.x, rect.y, rect.width, rect.height,
-		   0, 0, w, h);
-      var cached = new Image();
-      cached.onload = function() {
-        cache[[id, col]] = cached;
+		   0, 0, this.tileWidth, this.tileHeight);
+      if (cache[[id, col]] !== CachePlaceholder) {
+	var cached = new Image();
+	cached.onload = function() {
+          cache[[id, col]] = cached;
+	}
+	cache[[id, col]] = CachePlaceholder;
+	cached.src = buffer.toDataURL("image/png");
       }
-      cached.src = buffer.toDataURL("image/png");
       img = buffer;
     }
+    // draw background
     ctx.drawImage(img, 0, 0, this.tileWidth, this.tileHeight, x, y, w, h);
   }
   
@@ -61,15 +67,14 @@ function Tileset(options) {
 }
 
 function Terminal(options) {
-  const FG_COLOR_DEFAULT = 0xffffff;
-  const BG_COLOR_DEFAULT = 0x000000;
-  
   options = options || {}
-  this.scrWidth = options.scrWidth || 640;
-  this.scrHeight = options.scrHeight || 480;
   this.width = options.width || 80;
   this.height = options.height || 30;
   this.tileset = options.tileset || new Tileset();
+  this.scrWidth = options.scrWidth || this.width * this.tileset.tileWidth;
+  this.scrHeight = options.scrHeight || this.height * this.tileset.tileHeight;
+  fgColorDefault = options.fg || 0xffffff;
+  bgColorDefault = options.bg || 0x000000;
 
   var spriteWidth = this.scrWidth / this.width;
   var spriteHeight = this.scrHeight / this.height;
@@ -81,7 +86,7 @@ function Terminal(options) {
   canvas.height = this.scrHeight * this.resolution;
   canvas.style.width = this.scrWidth.toString() + "px";
   canvas.style.height = this.scrHeight.toString() + "px";
-  canvas.style.border = "1px solid";
+  //canvas.style.border = "1px solid";
   this.ctx = canvas.getContext("2d");
   this.ctx.mozImageSmoothingEnabled = false;
   this.ctx.webkitImageSmoothingEnabled = false;
@@ -96,12 +101,12 @@ function Terminal(options) {
     for (var x = 0; x < this.width; x++) {
       var col = [];
       for (var y = 0; y < this.height; y++) {
-	col.push({value: 0, fg: FG_COLOR_DEFAULT, bg: BG_COLOR_DEFAULT});
+	col.push({value: 0, fg: fgColorDefault, bg: bgColorDefault});
       }
       this.chars.push(col);
     }
     // background
-    this.ctx.fillStyle = cssColor(BG_COLOR_DEFAULT);
+    this.ctx.fillStyle = cssColor(bgColorDefault);
     this.ctx.fillRect(0, 0, this.scrWidth, this.scrHeight);
 
     // animate loop
@@ -125,8 +130,8 @@ function Terminal(options) {
   //
   this.putChar = function(x, y, c, fg, bg) {
     if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
-      if (typeof fg === "undefined") { fg = FG_COLOR_DEFAULT };
-      if (typeof bg === "undefined") { bg = BG_COLOR_DEFAULT };
+      if (typeof fg === "undefined") { fg = fgColorDefault };
+      if (typeof bg === "undefined") { bg = bgColorDefault };
       var value = (typeof c === "string") ? c.charCodeAt(0) : c;
       var src = this.tileset.getTileRect(value);
       this.chars[x][y].value = value;
@@ -187,7 +192,7 @@ function Terminal(options) {
   // --- drawing methods ----
   //
   this.drawPixel = function(x, y, col) {
-    if (typeof col === "undefined") { col = FG_COLOR_DEFAULT };
+    if (typeof col === "undefined") { col = fgColorDefault };
     this.ctx.fillStyle = cssColor(col);
     this.ctx.fillRect(x, y, 1, 1);
   }
